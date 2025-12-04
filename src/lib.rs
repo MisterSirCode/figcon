@@ -10,17 +10,17 @@ use std::{
 };
 
 #[derive(Clone, Debug)]
-/// Configurator
+/// FigCon
 /// 
 /// A simple synchronous config manager that relies on serde_json
 ///
 /// It stores its own path location and can be saved/reloaded at any time
-pub struct Conf {
+pub struct FigCon {
     live_config: Value,
     location: PathBuf
 }
 
-impl Display for Conf {
+impl Display for FigCon {
     /// A potentially slow function which attempts to display the entire configuration as a prettified json string.
     /// 
     /// It would be inadvisable to use this on larger configurations during runtime.
@@ -29,19 +29,19 @@ impl Display for Conf {
     }
 }
 
-impl Conf {
-    /// Initialize the configurator
+impl FigCon {
+    /// Initialize the FigCon
     /// 
     /// Attempts to load a config file with the given PathBuf
-    /// and returns an empty configurator when it fails
+    /// and returns an empty FigCon when it fails
     pub fn load_or_default(path: PathBuf) -> Self {
         if path.exists() && let Ok(file) = File::open(&path) {
             let mut buffer: String = Default::default();
             (&file).read_to_string(&mut buffer).expect("Failed to read config from storage");
             let json: Value = serde_json::from_str(&buffer).expect("JSON deserialization failed");
-            Conf { live_config: json, location: path }
+            FigCon { live_config: json, location: path }
         } else {
-            Conf { live_config: serde_json::Value::Object(Default::default()), location: path }
+            FigCon { live_config: serde_json::Value::Object(Default::default()), location: path }
         }
     }
 

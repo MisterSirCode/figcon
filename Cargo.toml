@@ -1,9 +1,9 @@
 [package]
-name = "configurator"
+name = "figcon"
 version = "0.1.0"
 description = "A small stupid-simple single-layer synchronous serde_json configuration manager"
 license-file = "LICENSE"
-repository = "https://github.com/MisterSirCode/configurator"
+repository = "https://github.com/MisterSirCode/figcon"
 edition = "2024"
 exclude = [
     "src/main.rs"

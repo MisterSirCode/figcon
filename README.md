@@ -1,4 +1,4 @@
-# configurator
+# figcon
 
 A stupid-simple synchronous serde_json config file manager
 
@@ -15,7 +15,7 @@ If you wish to make object trees or categories, make your own Objects with `serd
 
 ```rust
 use std::{env, path::Path};
-use configurator::Conf;
+use figcon::Conf;
 use serde_json::{to_value};
 
 fn main() {
