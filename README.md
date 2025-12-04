@@ -15,12 +15,12 @@ If you wish to make object trees or categories, make your own Objects with `serd
 
 ```rust
 use std::{env, path::Path};
-use figcon::Conf;
+use figcon::FigCon;
 use serde_json::{to_value};
 
 fn main() {
     // Example setup using config.json stored adjacent to the program binary
-    let mut conf = Conf::load_or_default(
+    let mut conf = FigCon::load_or_default(
         Path::join(env::current_dir().unwrap().as_path(), "config.json")
     );
 
