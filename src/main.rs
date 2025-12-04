@@ -1,19 +1,3 @@
-# configurator
-
-A stupid-simple synchronous serde_json config file manager
-
-I made this package for extremely basic json configuration for development or small applications, optimizing for simplicity/functionality over performance or quality. Feel free to never use this crate if you so please.
-
-It is by no means a proper or efficient config manager, nor a database.
-
-Key/Value pairs work fine with any `serde_json::Value` type, but because of the simple nature of this package,
-you can only make single-layer configurations using the code in this crate.
-
-If you wish to make object trees or categories, make your own Objects with `serde_json::Value` and set them with the config. You will just have to handle the Value type manually.
-
-## Use Example
-
-```rust
 use std::{env, path::Path};
 use configurator::Conf;
 use serde_json::{to_value};
@@ -42,13 +26,3 @@ fn main() {
     // Synchronous write to file
     conf.save();
 }
-```
-
-Output of the example above (./config.json)
-
-```json
-{
-  "Dynamic String Key": 1234,
-  "Static String Key": "Static Value Type"
-}
-```
