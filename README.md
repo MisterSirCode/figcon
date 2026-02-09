@@ -35,9 +35,17 @@ fn main() {
     conf.get("Dynamic String Key".to_owned());
     // Outputs: Value::Number(1234)
 
+    // Check if a key exists
+    conf.has_st("Another String");
+    // Ouputs: true
+
     // Delete keys in the config
     conf.del_st("Another String");
     // Config no longer stores that key/value pair
+
+    // Check if a key exists after a change
+    conf.has_st("Another String");
+    // Ouputs: false
 
     // Synchronous write to file
     conf.save();

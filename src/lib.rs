@@ -118,4 +118,18 @@ impl FigCon {
     pub fn del_st(&mut self, key: &str) -> Option<Value> {
         self.live_config.as_object_mut().unwrap().remove(key)
     }
+
+    /// Has Key
+    /// 
+    /// Checks if a key exists with a specified name
+    pub fn has(&self, key: String) -> bool {
+        self.live_config.as_object().unwrap().contains_key(&key)
+    }
+
+    /// Has Key (Static)
+    /// 
+    /// Checks if a key exists with a specified name
+    pub fn has_st(&self, key: &str) -> bool {
+        self.live_config.as_object().unwrap().contains_key(key)
+    }
 }

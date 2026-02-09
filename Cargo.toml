@@ -1,6 +1,6 @@
 [package]
 name = "figcon"
-version = "0.1.0"
+version = "0.1.1"
 description = "A small stupid-simple single-layer synchronous serde_json configuration manager"
 license-file = "LICENSE"
 repository = "https://github.com/MisterSirCode/figcon"
@@ -10,4 +10,4 @@ exclude = [
 ]
 
 [dependencies]
-serde_json = "1.0.145"
+serde_json = "1.0.149"
