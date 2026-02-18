@@ -1,4 +1,4 @@
-use serde_json::{Map, Value};
+use serde_json::{Map, Value, json};
 use std::{
     fmt::Display, 
     fs::File, 
@@ -16,6 +16,7 @@ trait ValueExtensions {
     fn get_by_key(&self, key: &str) -> Value;
     fn remove_get_key(&mut self, key: &str) -> Option<Value>;
     fn remove_key(&mut self, key: &str);
+    fn new_obj() -> Value;
 }
 
 impl ValueExtensions for Value {
@@ -63,6 +64,11 @@ impl ValueExtensions for Value {
             // Do nothing - Key is already gone
         }
     }
+
+    /// Create a new object structure with no contents
+    fn new_obj() -> Value {
+        json!({})
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -77,16 +83,18 @@ pub struct FigCon {
 }
 
 impl Display for FigCon {
-    /// A potentially slow function which attempts to display the entire configuration as a prettified json string.
+    /// # Format
     /// 
-    /// It would be inadvisable to use this on larger configurations during runtime.
+    /// A potentially slow function which attempts to display the entire configuration as a prettified json string
+    /// 
+    /// It would be inadvisable to use this on larger configurations during runtime
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", serde_json::to_string_pretty(&self.live_config).unwrap())
     }
 }
 
 impl FigCon {
-    /// Initialize the FigCon
+    /// # Initialize the FigCon
     /// 
     /// Attempts to load a config file with the given PathBuf
     /// and returns an empty FigCon when it fails
@@ -101,7 +109,7 @@ impl FigCon {
         }
     }
 
-    /// Set Config Path
+    /// # Set Config Path
     /// 
     /// Changing the location during runtime will not affect the live config, and it will not save to the new location automatically.
     /// 
@@ -110,14 +118,14 @@ impl FigCon {
         self.location = path;
     }
 
-    /// Reload Config
+    /// # Reload Config
     /// 
     /// Pull the config file again and overwrite the config in memory
     pub fn reload(&mut self) -> Self {
         Self::load_or_default(self.location.clone())
     }
 
-    /// Save Config
+    /// # Save Config
     /// 
     /// Write the current config state synchronously to the file system
     pub fn save(&self) {
@@ -126,78 +134,115 @@ impl FigCon {
         serde_json::to_writer_pretty(file, &self.live_config).expect("Config JSON serialization / writeout failed");
     }
 
-    /// Get 
+    /// # Get 
     /// 
     /// Get a serde_json Value with a specified key
-    pub fn get(&self, key: String) -> Value {
-        self.live_config[key].clone()
+    pub fn get(&self, key: String) -> Option<Value> {
+        let conf = self.live_config.as_object().unwrap();
+        if conf.contains_key(&key) {
+            Some(self.live_config[key].clone())
+        } else { None }
     }
 
-    /// Get Object
+    /// # Get (Static)
     /// 
-    /// A safe getter for objects in the config.
+    /// Get a serde_json Value with a specified key
+    pub fn get_st(&self, key: &str) -> Option<Value> {
+        self.get(key.to_owned())
+    }
+
+    /// # Get Object
+    /// 
+    /// A safe getter for objects in the config
     pub fn get_obj(&self, key: String) -> Option<Value> {
         let conf = self.live_config[key].clone();
         if conf.is_object() {
             Some(conf)
+        } else { None }
+    }
+
+    /// # Get Object (Static)
+    /// 
+    /// A safe getter for objects in the config
+    pub fn get_obj_st(&self, key: &str) -> Option<Value> {
+        self.get_obj(key.to_owned())
+    }
+
+    /// # New Object
+    /// 
+    /// Create a child structure within the current config with a given key
+    pub fn new_obj(&mut self, key: String) {
+        self.set(key, Value::new_obj());
+    }
+
+    /// # New Object (Static)
+    /// 
+    /// Create a child structure within the current config with a given key
+    pub fn new_obj_st(&mut self, key: &str) {
+        self.new_obj(key.to_owned());
+    }
+
+    /// # Set
+    /// 
+    /// Set a value with a specified key and serde_json Value
+    pub fn set(&mut self, key: String, value: Value) {
+        let conf = self.live_config.as_object_mut().unwrap();
+        if conf.contains_key(&key) {
+            conf[&key] = value;
         } else {
-            None
+            conf.insert(key, value);
         }
     }
 
-    /// Set
+    /// # Set (Static)
     /// 
     /// Set a value with a specified key and serde_json Value
-    pub fn set(&mut self, key: String, val: Value) {
-        self.live_config[key] = val;
+    pub fn set_st(&mut self, key: &str, value: Value) {
+        self.set(key.to_owned(), value);
     }
 
-    /// Get (Static)
-    /// 
-    /// Get a serde_json Value with a specified key
-    pub fn get_st(&self, key: &str) -> Value {
-        self.live_config[key.to_owned()].clone()
-    }
-
-    /// Set (Static)
-    /// 
-    /// Set a value with a specified key and serde_json Value
-    pub fn set_st(&mut self, key: &str, val: Value) {
-        self.live_config[key.to_owned()] = val;
-    }
-
-    /// Set String (Static)
+    /// # Set String
     /// 
     /// Set a value with a specified key and static string
-    pub fn set_str_st(&mut self, key: &str, val: &str) {
-        self.live_config[key.to_owned()] = Value::String(val.to_owned());
+    pub fn set_str(&mut self, key: &str, value: String) {
+        self.set_st(key, Value::String(value));
     }
 
-    /// Delete 
+    /// # Set String (Static)
+    /// 
+    /// Set a value with a specified key and static string
+    pub fn set_str_st(&mut self, key: &str, value: &str) {
+        self.set_str(key, value.to_owned());
+    }
+
+    /// # Delete 
     /// 
     /// Removes an entry with a specified key. Returns an option with the deleted Value (if it exists)
     pub fn del(&mut self, key: String) -> Option<Value> {
-        self.live_config.as_object_mut().unwrap().remove(&key)
+        let conf = self.live_config.as_object_mut().unwrap();
+        if conf.contains_key(&key) {
+            conf.remove(&key)
+        } else { None }
     }
 
-    /// Delete (Static)
+    /// # Delete (Static)
     /// 
     /// Removes an entry with a specified key. Returns an option with the deleted Value (if it exists)
     pub fn del_st(&mut self, key: &str) -> Option<Value> {
-        self.live_config.as_object_mut().unwrap().remove(key)
+        self.del(key.to_owned())
     }
 
-    /// Has Key
+    /// # Has Key
     /// 
     /// Checks if a key exists with a specified name
     pub fn has(&self, key: String) -> bool {
         self.live_config.as_object().unwrap().contains_key(&key)
     }
 
-    /// Has Key (Static)
+    /// # Has Key (Static)
     /// 
     /// Checks if a key exists with a specified name
     pub fn has_st(&self, key: &str) -> bool {
-        self.live_config.as_object().unwrap().contains_key(key)
+        self.has(key.to_owned())
     }
 }
