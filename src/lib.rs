@@ -1,4 +1,4 @@
-use serde_json::Value;
+use serde_json::{Map, Value};
 use std::{
     fmt::Display, 
     fs::File, 
@@ -8,6 +8,62 @@ use std::{
     }, 
     path::PathBuf
 };
+
+trait ValueExtensions {
+    fn obj(&self) -> &Map<String, Value>;
+    fn obj_mut(&mut self) -> &mut Map<String, Value>;
+    fn set_by_key(&mut self, key: &str, value: Value);
+    fn get_by_key(&self, key: &str) -> Value;
+    fn remove_get_key(&mut self, key: &str) -> Option<Value>;
+    fn remove_key(&mut self, key: &str);
+}
+
+impl ValueExtensions for Value {
+    /// Return an immutable reference to an object within a value
+    fn obj(&self) -> &Map<String, Value> {
+        self.as_object().expect("Cannot convert a non-object to an object")
+    }
+
+    /// Return a mutable reference to an object
+    fn obj_mut(&mut self) -> &mut Map<String, Value> {
+        self.as_object_mut().expect("Cannot convert a non-object to an object")
+    }
+
+    /// Assign a key's value within an object within a value
+    fn set_by_key(&mut self, key: &str, value: Value) {
+        let object = self.obj_mut();
+        if object.contains_key(key) {
+            object[key] = value;
+        } else {
+            object.insert(key.to_owned(), value);
+        }
+    }
+
+    /// Acquire a key's value within an object within a value
+    fn get_by_key(&self, key: &str) -> Value {
+        let object = self.obj();
+        if object.contains_key(key) {
+            object[key].clone()
+        } else {
+            Value::default()
+        }
+    }
+
+    /// Remove an object's key within a value and return it if it exists
+    fn remove_get_key(&mut self, key: &str) -> Option<Value> {
+        self.obj_mut().remove(key)
+    }
+
+    /// Remove an object's key within a value without respect to whether its assigned, or where its value goes
+    fn remove_key(&mut self, key: &str) {
+        let object = self.obj_mut();
+        if object.contains_key(key) {
+            object.remove(key);
+        } else {
+            // Do nothing - Key is already gone
+        }
+    }
+}
 
 #[derive(Clone, Debug)]
 /// FigCon
@@ -75,6 +131,18 @@ impl FigCon {
     /// Get a serde_json Value with a specified key
     pub fn get(&self, key: String) -> Value {
         self.live_config[key].clone()
+    }
+
+    /// Get Object
+    /// 
+    /// A safe getter for objects in the config.
+    pub fn get_obj(&self, key: String) -> Option<Value> {
+        let conf = self.live_config[key].clone();
+        if conf.is_object() {
+            Some(conf)
+        } else {
+            None
+        }
     }
 
     /// Set
