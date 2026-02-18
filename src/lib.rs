@@ -12,8 +12,8 @@ use std::{
 trait ValueExtensions {
     fn obj(&self) -> &Map<String, Value>;
     fn obj_mut(&mut self) -> &mut Map<String, Value>;
-    fn set_by_key(&mut self, key: &str, value: Value);
-    fn get_by_key(&self, key: &str) -> Value;
+    fn set_key(&mut self, key: &str, value: Value);
+    fn get_key(&self, key: &str) -> Value;
     fn remove_get_key(&mut self, key: &str) -> Option<Value>;
     fn remove_key(&mut self, key: &str);
     fn new_obj() -> Value;
@@ -21,17 +21,23 @@ trait ValueExtensions {
 
 impl ValueExtensions for Value {
     /// Return an immutable reference to an object within a value
+    /// 
+    /// Panics if used on non-objects.
     fn obj(&self) -> &Map<String, Value> {
         self.as_object().expect("Cannot convert a non-object to an object")
     }
 
     /// Return a mutable reference to an object
+    /// 
+    /// Panics if used on non-objects.
     fn obj_mut(&mut self) -> &mut Map<String, Value> {
         self.as_object_mut().expect("Cannot convert a non-object to an object")
     }
 
     /// Assign a key's value within an object within a value
-    fn set_by_key(&mut self, key: &str, value: Value) {
+    /// 
+    /// Panics if used on non-objects.
+    fn set_key(&mut self, key: &str, value: Value) {
         let object = self.obj_mut();
         if object.contains_key(key) {
             object[key] = value;
@@ -41,7 +47,9 @@ impl ValueExtensions for Value {
     }
 
     /// Acquire a key's value within an object within a value
-    fn get_by_key(&self, key: &str) -> Value {
+    /// 
+    /// Panics if used on non-objects.
+    fn get_key(&self, key: &str) -> Value {
         let object = self.obj();
         if object.contains_key(key) {
             object[key].clone()
@@ -51,18 +59,17 @@ impl ValueExtensions for Value {
     }
 
     /// Remove an object's key within a value and return it if it exists
+    /// 
+    /// Panics if used on non-objects.
     fn remove_get_key(&mut self, key: &str) -> Option<Value> {
         self.obj_mut().remove(key)
     }
 
     /// Remove an object's key within a value without respect to whether its assigned, or where its value goes
+    /// 
+    /// Panics if used on non-objects.
     fn remove_key(&mut self, key: &str) {
-        let object = self.obj_mut();
-        if object.contains_key(key) {
-            object.remove(key);
-        } else {
-            // Do nothing - Key is already gone
-        }
+        self.remove_get_key(key);
     }
 
     /// Create a new object structure with no contents
@@ -72,7 +79,7 @@ impl ValueExtensions for Value {
 }
 
 #[derive(Clone, Debug)]
-/// FigCon
+/// # FigCon
 /// 
 /// A simple synchronous config manager that relies on serde_json
 ///
