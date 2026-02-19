@@ -15,8 +15,8 @@ pub trait ValueExtensions {
     fn any_keys(&self) -> bool;
     fn set_key(&mut self, key: String, value: Value);
     fn set_key_st(&mut self, key: &str, value: Value);
-    fn get_key(&self, key: String) -> Option<Value>;
-    fn get_key_st(&self, key: &str) -> Option<Value>;
+    fn get_key(&mut self, key: String) -> Option<&mut Value>;
+    fn get_key_st(&mut self, key: &str) -> Option<&mut Value>;
     fn has_key(&self, key: String) -> bool;
     fn has_key_st(&self, key: &str) -> bool;
     fn remove_get_key(&mut self, key: String) -> Option<Value>;
@@ -25,10 +25,10 @@ pub trait ValueExtensions {
     fn remove_key_st(&mut self, key: &str);
     fn set_obj(&mut self, key: String, object: Value);
     fn set_obj_st(&mut self, key: &str, object: Value);
-    fn get_obj(&self, key: String) -> Option<Value>;
-    fn get_obj_st(&self, key: &str) -> Option<Value>;
-    fn new_obj(&mut self, key: String) -> Option<Value>;
-    fn new_obj_st(&mut self, key: &str) -> Option<Value>;
+    fn get_obj(&mut self, key: String) -> Option<&mut Value>;
+    fn get_obj_st(&mut self, key: &str) -> Option<&mut Value>;
+    fn new_obj(&mut self, key: String) -> Option<&mut Value>;
+    fn new_obj_st(&mut self, key: &str) -> Option<&mut Value>;
 }
 
 impl ValueExtensions for Value {
@@ -94,11 +94,11 @@ impl ValueExtensions for Value {
     /// Acquire a key's value within an object within a value
     /// 
     /// Will return None if used on non-objects
-    fn get_key(&self, key: String) -> Option<Value> {
-        match self.obj() {
+    fn get_key(&mut self, key: String) -> Option<&mut Value> {
+        match self.obj_mut() {
             Some(object) => {
                 if object.contains_key(&key) {
-                    Some(object[&key].clone())
+                    Some(&mut object[&key])
                 } else {
                     None
                 }
@@ -112,7 +112,7 @@ impl ValueExtensions for Value {
     /// Acquire a key's value within an object within a value
     /// 
     /// Will return None if used on non-objects
-    fn get_key_st(&self, key: &str) -> Option<Value> {
+    fn get_key_st(&mut self, key: &str) -> Option<&mut Value> {
         self.get_key(key.to_owned())
     }
 
@@ -215,7 +215,7 @@ impl ValueExtensions for Value {
     /// Get an object within the keys
     /// 
     /// Will return None if used on non-objects
-    fn get_obj(&self, key: String) -> Option<Value> {
+    fn get_obj(&mut self, key: String) -> Option<&mut Value> {
         if !self.is_object() { return None; }
         match self.get_key(key) {
             Some(value) => {
@@ -232,7 +232,7 @@ impl ValueExtensions for Value {
     /// Get an object within the keys
     /// 
     /// Will return None if used on non-objects
-    fn get_obj_st(&self, key: &str) -> Option<Value> {
+    fn get_obj_st(&mut self, key: &str) -> Option<&mut Value> {
         self.get_obj(key.to_owned())
     }
 
@@ -241,7 +241,7 @@ impl ValueExtensions for Value {
     /// Create a child structure within the current config with a given key
     /// 
     /// Will return None if used on non-objects
-    fn new_obj(&mut self, key: String) -> Option<Value> {
+    fn new_obj(&mut self, key: String) -> Option<&mut Value> {
         if !self.is_object() { return None; }
         self.set_key(key.clone(), json!({}));
         Some(self.get_key(key).unwrap())
@@ -252,7 +252,7 @@ impl ValueExtensions for Value {
     /// Create a child structure within the current config with a given key
     /// 
     /// Will return None if used on non-objects
-    fn new_obj_st(&mut self, key: &str) -> Option<Value> {
+    fn new_obj_st(&mut self, key: &str) -> Option<&mut Value> {
         self.new_obj(key.to_owned())
     }
 }
@@ -325,7 +325,7 @@ impl FigCon {
     /// Acquire a key's value within an object within a value
     /// 
     /// Will return None if used on non-objects
-    pub fn get_key(&self, key: String) -> Option<Value> {
+    pub fn get_key(&mut self, key: String) -> Option<&mut Value> {
         self.live_config.get_key(key)
     }
 
@@ -334,7 +334,7 @@ impl FigCon {
     /// Acquire a key's value within an object within a value
     /// 
     /// Will return None if used on non-objects
-    pub fn get_key_st(&self, key: &str) -> Option<Value> {
+    pub fn get_key_st(&mut self, key: &str) -> Option<&mut Value> {
         self.get_key(key.to_owned())
     }
 
@@ -410,17 +410,53 @@ impl FigCon {
         self.remove_key(key.to_owned());
     }
 
+    /// # Set Object
+    /// 
+    /// Overwrite an object within the value, and combine the keys inside
+    /// 
+    /// Will do nothing if used on non-objects
+    pub fn set_obj(&mut self, key: String, object: Value) {
+        self.live_config.set_obj(key, object);
+    }
+
+    /// # Set Object (Static)
+    /// 
+    /// Overwrite an object within the value, and combine the keys inside
+    /// 
+    /// Will do nothing if used on non-objects
+    pub fn set_obj_st(&mut self, key: &str, object: Value) {
+        self.set_obj(key.to_owned(), object);
+    }
+
+    /// # Get Object
+    /// 
+    /// Get an object within the keys
+    /// 
+    /// Will return None if used on non-objects
+    pub fn get_obj(&mut self, key: String) -> Option<&mut Value> {
+        self.live_config.get_obj(key)
+    }
+
+    /// # Get Object (Static)
+    /// 
+    /// Get an object within the keys
+    /// 
+    /// Will return None if used on non-objects
+    pub fn get_obj_st(&mut self, key: &str) -> Option<&mut Value> {
+        self.get_obj(key.to_owned())
+    }
+
     /// # New Object
     /// 
     /// Create a child structure within the current config with a given key
-    pub fn new_obj(&mut self, key: String) -> Value {
+    pub fn new_obj(&mut self, key: String) -> &mut Value {
         self.live_config.new_obj(key).unwrap() // No option handling- Live config is always an object
     }
 
     /// # New Object (Static)
     /// 
     /// Create a child structure within the current config with a given key
-    pub fn new_obj_st(&mut self, key: &str) -> Value {
+    pub fn new_obj_st(&mut self, key: &str) -> &mut Value {
         self.new_obj(key.to_owned())
     }
 }
