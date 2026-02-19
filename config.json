@@ -1,0 +1,12 @@
+{
+  "Dynamic String Key": 1234,
+  "Static String Key": "Static Value Type",
+  "Subtree One": {
+    "child": {
+      "Child's Subtree": {
+        "Subchild's parameter": "hello world!"
+      },
+      "Child's parameter": 1234
+    }
+  }
+}
