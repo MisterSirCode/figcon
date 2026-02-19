@@ -19,14 +19,16 @@ pub trait ValueExtensions {
     fn get_key_st(&self, key: &str) -> Option<Value>;
     fn has_key(&self, key: String) -> bool;
     fn has_key_st(&self, key: &str) -> bool;
-    fn set_obj(&mut self, key: String, object: Value);
-    fn set_obj_st(&mut self, key: &str, object: Value);
-    fn get_obj(&self, key: String) -> Option<Value>;
-    fn get_obj_st(&self, key: &str) -> Option<Value>;
     fn remove_get_key(&mut self, key: String) -> Option<Value>;
     fn remove_get_key_st(&mut self, key: &str) -> Option<Value>;
     fn remove_key(&mut self, key: String);
     fn remove_key_st(&mut self, key: &str);
+    fn set_obj(&mut self, key: String, object: Value);
+    fn set_obj_st(&mut self, key: &str, object: Value);
+    fn get_obj(&self, key: String) -> Option<Value>;
+    fn get_obj_st(&self, key: &str) -> Option<Value>;
+    fn new_obj(&mut self, key: String) -> Option<Value>;
+    fn new_obj_st(&mut self, key: &str) -> Option<Value>;
 }
 
 impl ValueExtensions for Value {
@@ -137,6 +139,47 @@ impl ValueExtensions for Value {
         self.has_key(key.to_owned())
     }
 
+    /// # Remove and Get Key
+    /// 
+    /// Remove an object's key within a value and return it if it exists
+    /// 
+    /// Will return None if used on non-objects
+    fn remove_get_key(&mut self, key: String) -> Option<Value> {
+        match self.obj_mut() {
+            Some(object) => {
+                object.remove(&key)
+            },
+            None => None
+        }
+    }
+
+    /// # Remove and Get Key (Static)
+    /// 
+    /// Remove an object's key within a value and return it if it exists
+    /// 
+    /// Will return None if used on non-objects
+    fn remove_get_key_st(&mut self, key: &str) -> Option<Value> {
+        self.remove_get_key(key.to_owned())
+    }
+
+    /// # Remove Key
+    /// 
+    /// Remove an object's key within a value without respect to whether its assigned, or where its value goes
+    /// 
+    /// Will do nothing if used on non-objects
+    fn remove_key(&mut self, key: String) {
+        self.remove_get_key(key);
+    }
+
+    /// # Remove Key (Static)
+    /// 
+    /// Remove an object's key within a value without respect to whether its assigned, or where its value goes
+    /// 
+    /// Will do nothing if used on non-objects
+    fn remove_key_st(&mut self, key: &str) {
+        self.remove_key(key.to_owned());
+    }
+
     /// # Set Object
     /// 
     /// Overwrite an object within the value, and combine the keys inside
@@ -193,45 +236,24 @@ impl ValueExtensions for Value {
         self.get_obj(key.to_owned())
     }
 
-    /// # Remove and Get Key
+    /// # New Object
     /// 
-    /// Remove an object's key within a value and return it if it exists
-    /// 
-    /// Will return None if used on non-objects
-    fn remove_get_key(&mut self, key: String) -> Option<Value> {
-        match self.obj_mut() {
-            Some(object) => {
-                object.remove(&key)
-            },
-            None => None
-        }
-    }
-
-    /// # Remove and Get Key (Static)
-    /// 
-    /// Remove an object's key within a value and return it if it exists
+    /// Create a child structure within the current config with a given key
     /// 
     /// Will return None if used on non-objects
-    fn remove_get_key_st(&mut self, key: &str) -> Option<Value> {
-        self.remove_get_key(key.to_owned())
+    fn new_obj(&mut self, key: String) -> Option<Value> {
+        if !self.is_object() { return None; }
+        self.set_key(key.clone(), json!({}));
+        Some(self.get_key(key).unwrap())
     }
 
-    /// # Remove Key
+    /// # New Object (Static)
     /// 
-    /// Remove an object's key within a value without respect to whether its assigned, or where its value goes
+    /// Create a child structure within the current config with a given key
     /// 
-    /// Will do nothing if used on non-objects
-    fn remove_key(&mut self, key: String) {
-        self.remove_get_key(key);
-    }
-
-    /// # Remove Key (Static)
-    /// 
-    /// Remove an object's key within a value without respect to whether its assigned, or where its value goes
-    /// 
-    /// Will do nothing if used on non-objects
-    fn remove_key_st(&mut self, key: &str) {
-        self.remove_key(key.to_owned());
+    /// Will return None if used on non-objects
+    fn new_obj_st(&mut self, key: &str) -> Option<Value> {
+        self.new_obj(key.to_owned())
     }
 }
 
@@ -392,8 +414,7 @@ impl FigCon {
     /// 
     /// Create a child structure within the current config with a given key
     pub fn new_obj(&mut self, key: String) -> Value {
-        self.set_key(key.clone(), json!({}));
-        self.get_key(key).unwrap()
+        self.live_config.new_obj(key).unwrap() // No option handling- Live config is always an object
     }
 
     /// # New Object (Static)
