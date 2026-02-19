@@ -6,10 +6,9 @@ I made this package for extremely basic json configuration for development or sm
 
 It is by no means a proper or efficient config manager, nor a database.
 
-Key/Value pairs work fine with any `serde_json::Value` type, but because of the simple nature of this package,
-you can only make single-layer configurations using the code in this crate.
+Key/Value pairs work fine with any `serde_json::Value` type.
 
-If you wish to make object trees or categories, make your own Objects with `serde_json::Value` and set them with the config. You will just have to handle the Value type manually.
+If you wish to make object trees or categories, this library extends the Value implementation to allow some primitive object tree manipulation. Its manual and will panic if used on non-objects. 
 
 ## Use Example
 

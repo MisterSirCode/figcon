@@ -9,72 +9,229 @@ use std::{
     path::PathBuf
 };
 
-trait ValueExtensions {
-    fn obj(&self) -> &Map<String, Value>;
-    fn obj_mut(&mut self) -> &mut Map<String, Value>;
-    fn set_key(&mut self, key: &str, value: Value);
-    fn get_key(&self, key: &str) -> Value;
-    fn remove_get_key(&mut self, key: &str) -> Option<Value>;
-    fn remove_key(&mut self, key: &str);
-    fn new_obj() -> Value;
+pub trait ValueExtensions {
+    fn obj(&self) -> Option<&Map<String, Value>>;
+    fn obj_mut(&mut self) -> Option<&mut Map<String, Value>>;
+    fn any_keys(&self) -> bool;
+    fn set_key(&mut self, key: String, value: Value);
+    fn set_key_st(&mut self, key: &str, value: Value);
+    fn get_key(&self, key: String) -> Option<Value>;
+    fn get_key_st(&self, key: &str) -> Option<Value>;
+    fn has_key(&self, key: String) -> bool;
+    fn has_key_st(&self, key: &str) -> bool;
+    fn set_obj(&mut self, key: String, object: Value);
+    fn set_obj_st(&mut self, key: &str, object: Value);
+    fn get_obj(&self, key: String) -> Option<Value>;
+    fn get_obj_st(&self, key: &str) -> Option<Value>;
+    fn remove_get_key(&mut self, key: String) -> Option<Value>;
+    fn remove_get_key_st(&mut self, key: &str) -> Option<Value>;
+    fn remove_key(&mut self, key: String);
+    fn remove_key_st(&mut self, key: &str);
 }
 
 impl ValueExtensions for Value {
+    /// # Object
+    /// 
     /// Return an immutable reference to an object within a value
-    /// 
-    /// Panics if used on non-objects.
-    fn obj(&self) -> &Map<String, Value> {
-        self.as_object().expect("Cannot convert a non-object to an object")
+    fn obj(&self) -> Option<&Map<String, Value>> {
+        if self.is_object() { Some(self.as_object().unwrap()) }
+        else { None }
     }
 
-    /// Return a mutable reference to an object
+    /// # Object (Mutable)
     /// 
-    /// Panics if used on non-objects.
-    fn obj_mut(&mut self) -> &mut Map<String, Value> {
-        self.as_object_mut().expect("Cannot convert a non-object to an object")
+    /// Return a mutable reference to an object within a value
+    fn obj_mut(&mut self) -> Option<&mut Map<String, Value>> {
+        if self.is_object() { Some(self.as_object_mut().unwrap()) }
+        else { None }
     }
 
+    /// # Any Keys
+    /// 
+    /// Returns true if the object contains any keys (Length > 0)
+    /// 
+    /// Automatically returns false if used on non-objects
+    fn any_keys(&self) -> bool {
+        match self.obj() {
+            Some(object) => {
+                !object.is_empty()
+            },
+            None => false
+        }
+    }
+
+    /// # Set Key
+    /// 
     /// Assign a key's value within an object within a value
     /// 
-    /// Panics if used on non-objects.
-    fn set_key(&mut self, key: &str, value: Value) {
-        let object = self.obj_mut();
-        if object.contains_key(key) {
-            object[key] = value;
-        } else {
-            object.insert(key.to_owned(), value);
+    /// Will do nothing if used on non-objects
+    fn set_key(&mut self, key: String, value: Value) {
+        match self.obj_mut() {
+            Some(object) => {
+                if object.contains_key(&key) {
+                    object[&key] = value;
+                } else {
+                    object.insert(key.to_owned(), value);
+                }
+            },
+            None => {}
         }
     }
 
+    /// # Set Key (Static)
+    /// 
+    /// Assign a key's value within an object within a value
+    /// 
+    /// Will do nothing if used on non-objects
+    fn set_key_st(&mut self, key: &str, value: Value) {
+        self.set_key(key.to_owned(), value);
+    }
+
+    /// # Get Key
+    /// 
     /// Acquire a key's value within an object within a value
     /// 
-    /// Panics if used on non-objects.
-    fn get_key(&self, key: &str) -> Value {
-        let object = self.obj();
-        if object.contains_key(key) {
-            object[key].clone()
-        } else {
-            Value::default()
+    /// Will return None if used on non-objects
+    fn get_key(&self, key: String) -> Option<Value> {
+        match self.obj() {
+            Some(object) => {
+                if object.contains_key(&key) {
+                    Some(object[&key].clone())
+                } else {
+                    None
+                }
+            },
+            None => None
         }
     }
 
-    /// Remove an object's key within a value and return it if it exists
+    /// # Get Key (Static)
     /// 
-    /// Panics if used on non-objects.
-    fn remove_get_key(&mut self, key: &str) -> Option<Value> {
-        self.obj_mut().remove(key)
+    /// Acquire a key's value within an object within a value
+    /// 
+    /// Will return None if used on non-objects
+    fn get_key_st(&self, key: &str) -> Option<Value> {
+        self.get_key(key.to_owned())
     }
 
+    /// # Has Key
+    /// 
+    /// Check if a key exists within an object within a value
+    /// 
+    /// Automatically returns false if used on non-objects
+    fn has_key(&self, key: String) -> bool {
+        match self.obj() {
+            Some(object) => {
+                object.contains_key(&key)
+            },
+            None => false
+        }
+    }
+
+    /// # Has Key
+    /// 
+    /// Check if a key exists within an object within a value
+    /// 
+    /// Automatically returns false if used on non-objects
+    fn has_key_st(&self, key: &str) -> bool {
+        self.has_key(key.to_owned())
+    }
+
+    /// # Set Object
+    /// 
+    /// Overwrite an object within the value, and combine the keys inside
+    /// 
+    /// Will do nothing if used on non-objects
+    fn set_obj(&mut self, key: String, object: Value) {
+        if !object.is_object() { return; } // Dont waste time. No object? leave
+        if !object.any_keys() { return; } // Dont waste time. No keys? leave
+        let can_extend = self.has_key(key.clone()) && self.any_keys();
+        match self.obj_mut() {
+            Some(self_obj) => {
+                if can_extend {
+                    self_obj.extend(object.obj().unwrap().clone());
+                } else {
+                    self.set_key(key, object);
+                }
+            },
+            None => {}
+        }
+    }
+
+    /// # Set Object (Static)
+    /// 
+    /// Overwrite an object within the value, and combine the keys inside
+    /// 
+    /// Will do nothing if used on non-objects
+    fn set_obj_st(&mut self, key: &str, object: Value) {
+        self.set_obj(key.to_owned(), object);
+    }
+
+    /// # Get Object
+    /// 
+    /// Get an object within the keys
+    /// 
+    /// Will return None if used on non-objects
+    fn get_obj(&self, key: String) -> Option<Value> {
+        if !self.is_object() { return None; }
+        match self.get_key(key) {
+            Some(value) => {
+                if value.is_object() {
+                    Some(value)
+                } else { None }
+            },
+            None => None
+        }
+    }
+
+    /// # Get Object (Static)
+    /// 
+    /// Get an object within the keys
+    /// 
+    /// Will return None if used on non-objects
+    fn get_obj_st(&self, key: &str) -> Option<Value> {
+        self.get_obj(key.to_owned())
+    }
+
+    /// # Remove and Get Key
+    /// 
+    /// Remove an object's key within a value and return it if it exists
+    /// 
+    /// Will return None if used on non-objects
+    fn remove_get_key(&mut self, key: String) -> Option<Value> {
+        match self.obj_mut() {
+            Some(object) => {
+                object.remove(&key)
+            },
+            None => None
+        }
+    }
+
+    /// # Remove and Get Key (Static)
+    /// 
+    /// Remove an object's key within a value and return it if it exists
+    /// 
+    /// Will return None if used on non-objects
+    fn remove_get_key_st(&mut self, key: &str) -> Option<Value> {
+        self.remove_get_key(key.to_owned())
+    }
+
+    /// # Remove Key
+    /// 
     /// Remove an object's key within a value without respect to whether its assigned, or where its value goes
     /// 
-    /// Panics if used on non-objects.
-    fn remove_key(&mut self, key: &str) {
+    /// Will do nothing if used on non-objects
+    fn remove_key(&mut self, key: String) {
         self.remove_get_key(key);
     }
 
-    /// Create a new object structure with no contents
-    fn new_obj() -> Value {
-        json!({})
+    /// # Remove Key (Static)
+    /// 
+    /// Remove an object's key within a value without respect to whether its assigned, or where its value goes
+    /// 
+    /// Will do nothing if used on non-objects
+    fn remove_key_st(&mut self, key: &str) {
+        self.remove_key(key.to_owned());
     }
 }
 
@@ -141,115 +298,108 @@ impl FigCon {
         serde_json::to_writer_pretty(file, &self.live_config).expect("Config JSON serialization / writeout failed");
     }
 
-    /// # Get 
+    /// # Get Key
     /// 
-    /// Get a serde_json Value with a specified key
-    pub fn get(&self, key: String) -> Option<Value> {
-        let conf = self.live_config.as_object().unwrap();
-        if conf.contains_key(&key) {
-            Some(self.live_config[key].clone())
-        } else { None }
+    /// Acquire a key's value within an object within a value
+    /// 
+    /// Will return None if used on non-objects
+    pub fn get_key(&self, key: String) -> Option<Value> {
+        self.live_config.get_key(key)
     }
 
-    /// # Get (Static)
+    /// # Get Key (Static)
     /// 
-    /// Get a serde_json Value with a specified key
-    pub fn get_st(&self, key: &str) -> Option<Value> {
-        self.get(key.to_owned())
+    /// Acquire a key's value within an object within a value
+    /// 
+    /// Will return None if used on non-objects
+    pub fn get_key_st(&self, key: &str) -> Option<Value> {
+        self.get_key(key.to_owned())
     }
 
-    /// # Get Object
+    /// # Set Key
     /// 
-    /// A safe getter for objects in the config
-    pub fn get_obj(&self, key: String) -> Option<Value> {
-        let conf = self.live_config[key].clone();
-        if conf.is_object() {
-            Some(conf)
-        } else { None }
+    /// Assign a key's value within an object within a value
+    /// 
+    /// Will do nothing if used on non-objects
+    pub fn set_key(&mut self, key: String, value: Value) {
+        self.live_config.set_key(key, value);
     }
 
-    /// # Get Object (Static)
+    /// # Set Key (Static)
     /// 
-    /// A safe getter for objects in the config
-    pub fn get_obj_st(&self, key: &str) -> Option<Value> {
-        self.get_obj(key.to_owned())
+    /// Assign a key's value within an object within a value
+    /// 
+    /// Will do nothing if used on non-objects
+    pub fn set_key_st(&mut self, key: &str, value: Value) {
+        self.set_key(key.to_owned(), value);
+    }
+
+    /// # Has Key
+    /// 
+    /// Check if a key exists within an object within a value
+    /// 
+    /// Automatically returns false if used on non-objects
+    pub fn has_key(&self, key: String) -> bool {
+        self.live_config.has_key(key)
+    }
+
+    /// # Has Key
+    /// 
+    /// Check if a key exists within an object within a value
+    /// 
+    /// Automatically returns false if used on non-objects
+    pub fn has_key_st(&self, key: &str) -> bool {
+        self.has_key(key.to_owned())
+    }
+
+    /// # Remove and Get Key
+    /// 
+    /// Remove an object's key within a value and return it if it exists
+    /// 
+    /// Will return None if used on non-objects
+    pub fn remove_get_key(&mut self, key: String) -> Option<Value> {
+        self.live_config.remove_get_key(key)
+    }
+
+    /// # Remove and Get Key (Static)
+    /// 
+    /// Remove an object's key within a value and return it if it exists
+    /// 
+    /// Will return None if used on non-objects
+    pub fn remove_get_key_st(&mut self, key: &str) -> Option<Value> {
+        self.remove_get_key(key.to_owned())
+    }
+
+    /// # Remove Key
+    /// 
+    /// Remove an object's key within a value without respect to whether its assigned, or where its value goes
+    /// 
+    /// Will do nothing if used on non-objects
+    pub fn remove_key(&mut self, key: String) {
+        self.remove_get_key(key);
+    }
+
+    /// # Remove Key (Static)
+    /// 
+    /// Remove an object's key within a value without respect to whether its assigned, or where its value goes
+    /// 
+    /// Will do nothing if used on non-objects
+    pub fn remove_key_st(&mut self, key: &str) {
+        self.remove_key(key.to_owned());
     }
 
     /// # New Object
     /// 
     /// Create a child structure within the current config with a given key
-    pub fn new_obj(&mut self, key: String) {
-        self.set(key, Value::new_obj());
+    pub fn new_obj(&mut self, key: String) -> Value {
+        self.set_key(key.clone(), json!({}));
+        self.get_key(key).unwrap()
     }
 
     /// # New Object (Static)
     /// 
     /// Create a child structure within the current config with a given key
-    pub fn new_obj_st(&mut self, key: &str) {
-        self.new_obj(key.to_owned());
-    }
-
-    /// # Set
-    /// 
-    /// Set a value with a specified key and serde_json Value
-    pub fn set(&mut self, key: String, value: Value) {
-        let conf = self.live_config.as_object_mut().unwrap();
-        if conf.contains_key(&key) {
-            conf[&key] = value;
-        } else {
-            conf.insert(key, value);
-        }
-    }
-
-    /// # Set (Static)
-    /// 
-    /// Set a value with a specified key and serde_json Value
-    pub fn set_st(&mut self, key: &str, value: Value) {
-        self.set(key.to_owned(), value);
-    }
-
-    /// # Set String
-    /// 
-    /// Set a value with a specified key and static string
-    pub fn set_str(&mut self, key: &str, value: String) {
-        self.set_st(key, Value::String(value));
-    }
-
-    /// # Set String (Static)
-    /// 
-    /// Set a value with a specified key and static string
-    pub fn set_str_st(&mut self, key: &str, value: &str) {
-        self.set_str(key, value.to_owned());
-    }
-
-    /// # Delete 
-    /// 
-    /// Removes an entry with a specified key. Returns an option with the deleted Value (if it exists)
-    pub fn del(&mut self, key: String) -> Option<Value> {
-        let conf = self.live_config.as_object_mut().unwrap();
-        if conf.contains_key(&key) {
-            conf.remove(&key)
-        } else { None }
-    }
-
-    /// # Delete (Static)
-    /// 
-    /// Removes an entry with a specified key. Returns an option with the deleted Value (if it exists)
-    pub fn del_st(&mut self, key: &str) -> Option<Value> {
-        self.del(key.to_owned())
-    }
-
-    /// # Has Key
-    /// 
-    /// Checks if a key exists with a specified name
-    pub fn has(&self, key: String) -> bool {
-        self.live_config.as_object().unwrap().contains_key(&key)
-    }
-
-    /// # Has Key (Static)
-    /// 
-    /// Checks if a key exists with a specified name
-    pub fn has_st(&self, key: &str) -> bool {
-        self.has(key.to_owned())
+    pub fn new_obj_st(&mut self, key: &str) -> Value {
+        self.new_obj(key.to_owned())
     }
 }
