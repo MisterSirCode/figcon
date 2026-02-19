@@ -1,5 +1,7 @@
 # figcon
 
+[Documentation](https://docs.rs/figcon/latest/figcon/struct.FigCon.html)
+
 A stupid-simple synchronous serde_json config file manager
 
 I made this package for extremely basic json configuration for development or small applications, optimizing for simplicity/functionality over performance or quality. Feel free to never use this crate if you so please.
