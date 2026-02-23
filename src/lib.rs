@@ -1,4 +1,4 @@
-use serde_json::{Map, Value, json};
+use serde_json::{Map, Value, json, map::{Keys, Values}};
 use std::{
     fmt::Display, 
     fs::File, 
@@ -13,6 +13,10 @@ pub trait ValueExtensions {
     fn obj(&self) -> Option<&Map<String, Value>>;
     fn obj_mut(&mut self) -> Option<&mut Map<String, Value>>;
     fn any_keys(&self) -> bool;
+    fn list_keys(&self) -> Option<Vec<String>>;
+    fn list_values(&self) -> Option<Vec<Value>>;
+    fn iter_keys(&mut self) -> Option<Keys<'_>>;
+    fn iter_values(&mut self) -> Option<Values<'_>>;
     fn set_key(&mut self, key: String, value: Value);
     fn set_key_st(&mut self, key: &str, value: Value);
     fn get_key(&mut self, key: String) -> Option<&mut Value>;
@@ -60,6 +64,42 @@ impl ValueExtensions for Value {
             },
             None => false
         }
+    }
+
+    /// # List Keys
+    /// 
+    /// Attempts to return all keys within an object
+    fn list_keys(&self) -> Option<Vec<String>> {
+        if self.any_keys() {
+            Some(self.as_object().unwrap().keys().cloned().collect())
+        } else { None }
+    }
+
+    /// # List Values
+    /// 
+    /// Attempts to return all values within an object
+    fn list_values(&self) -> Option<Vec<Value>> {
+        if self.any_keys() {
+            Some(self.as_object().unwrap().values().cloned().collect())
+        } else { None }
+    }
+
+    /// # Iterate Keys
+    /// 
+    /// Attempts to return an iterator for the keys within the current object.
+    fn iter_keys(&mut self) -> Option<Keys<'_>> {
+        if self.any_keys() {
+            Some(self.as_object().unwrap().keys())
+        } else { None }
+    }
+
+    /// # Iterate Values
+    /// 
+    /// Attempts to return an iterator for the values within the current object.
+    fn iter_values(&mut self) -> Option<Values<'_>> {
+        if self.any_keys() {
+            Some(self.as_object().unwrap().values())
+        } else { None }
     }
 
     /// # Set Key
@@ -318,6 +358,43 @@ impl FigCon {
         let file = File::create(&self.location).expect("Failed to create config file"); // this works regardless of if file exists or not
         let file = BufWriter::new(file); // this makes it orders of magnitude faser
         serde_json::to_writer_pretty(file, &self.live_config).expect("Config JSON serialization / writeout failed");
+    }
+
+    /// # Any Keys
+    /// 
+    /// Returns true if the object contains any keys (Length > 0)
+    /// 
+    /// Automatically returns false if used on non-objects
+    pub fn any_keys(&self) -> bool {
+        self.live_config.any_keys()
+    }
+
+    /// # List Keys
+    /// 
+    /// Attempts to return all keys within an object
+    pub fn list_keys(&self) -> Option<Vec<String>> {
+        self.live_config.list_keys()
+    }
+
+    /// # List Values
+    /// 
+    /// Attempts to return all values within an object
+    pub fn list_values(&self) -> Option<Vec<Value>> {
+        self.live_config.list_values()
+    }
+
+    /// # Iterate Keys
+    /// 
+    /// Attempts to return an iterator for the keys within the current object.
+    pub fn iter_keys(&mut self) -> Option<Keys<'_>> {
+        self.live_config.iter_keys()
+    }
+
+    /// # Iterate Values
+    /// 
+    /// Attempts to return an iterator for the values within the current object.
+    pub fn iter_values(&mut self) -> Option<Values<'_>> {
+        self.live_config.iter_values()
     }
 
     /// # Get Key
