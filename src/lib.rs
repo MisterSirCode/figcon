@@ -19,8 +19,10 @@ pub trait ValueExtensions {
     fn iter_values(&mut self) -> Option<Values<'_>>;
     fn set_key(&mut self, key: String, value: Value);
     fn set_key_st(&mut self, key: &str, value: Value);
-    fn get_key(&mut self, key: String) -> Option<&mut Value>;
-    fn get_key_st(&mut self, key: &str) -> Option<&mut Value>;
+    fn get_key_mut(&mut self, key: String) -> Option<&mut Value>;
+    fn get_key_mut_st(&mut self, key: &str) -> Option<&mut Value>;
+    fn get_key(&self, key: String) -> Option<&Value>;
+    fn get_key_st(&self, key: &str) -> Option<&Value>;
     fn has_key(&self, key: String) -> bool;
     fn has_key_st(&self, key: &str) -> bool;
     fn remove_get_key(&mut self, key: String) -> Option<Value>;
@@ -29,8 +31,10 @@ pub trait ValueExtensions {
     fn remove_key_st(&mut self, key: &str);
     fn set_obj(&mut self, key: String, object: Value);
     fn set_obj_st(&mut self, key: &str, object: Value);
-    fn get_obj(&mut self, key: String) -> Option<&mut Value>;
-    fn get_obj_st(&mut self, key: &str) -> Option<&mut Value>;
+    fn get_obj_mut(&mut self, key: String) -> Option<&mut Value>;
+    fn get_obj_mut_st(&mut self, key: &str) -> Option<&mut Value>;
+    fn get_obj(&self, key: String) -> Option<&Value>;
+    fn get_obj_st(&self, key: &str) -> Option<&Value>;
     fn new_obj(&mut self, key: String) -> Option<&mut Value>;
     fn new_obj_st(&mut self, key: &str) -> Option<&mut Value>;
 }
@@ -126,16 +130,43 @@ impl ValueExtensions for Value {
         self.set_key(key.to_owned(), value);
     }
 
+    /// # Get Key (Mutable)
+    /// 
+    /// Acquire a key's value within an object within a value
+    /// 
+    /// Will return None if used on non-objects
+    fn get_key_mut(&mut self, key: String) -> Option<&mut Value> {
+        match self.obj_mut() {
+            Some(object) => {
+                if object.contains_key(&key) {
+                    Some(&mut object[&key])
+                } else {
+                    None
+                }
+            },
+            None => None
+        }
+    }
+
+    /// # Get Key (Mutable, Static)
+    /// 
+    /// Acquire a key's value within an object within a value
+    /// 
+    /// Will return None if used on non-objects
+    fn get_key_mut_st(&mut self, key: &str) -> Option<&mut Value> {
+        self.get_key_mut(key.to_owned())
+    }
+
     /// # Get Key
     /// 
     /// Acquire a key's value within an object within a value
     /// 
     /// Will return None if used on non-objects
-    fn get_key(&mut self, key: String) -> Option<&mut Value> {
-        match self.obj_mut() {
+    fn get_key(&self, key: String) -> Option<&Value> {
+        match self.obj() {
             Some(object) => {
                 if object.contains_key(&key) {
-                    Some(&mut object[&key])
+                    Some(&object[&key])
                 } else {
                     None
                 }
@@ -149,7 +180,7 @@ impl ValueExtensions for Value {
     /// Acquire a key's value within an object within a value
     /// 
     /// Will return None if used on non-objects
-    fn get_key_st(&mut self, key: &str) -> Option<&mut Value> {
+    fn get_key_st(&self, key: &str) -> Option<&Value> {
         self.get_key(key.to_owned())
     }
 
@@ -244,12 +275,38 @@ impl ValueExtensions for Value {
         self.set_obj(key.to_owned(), object);
     }
 
+    /// # Get Object (Mutable)
+    /// 
+    /// Get an object within the keys
+    /// 
+    /// Will return None if used on non-objects
+    fn get_obj_mut(&mut self, key: String) -> Option<&mut Value> {
+        if !self.is_object() { return None; }
+        match self.get_key_mut(key) {
+            Some(value) => {
+                if value.is_object() {
+                    Some(value)
+                } else { None }
+            },
+            None => None
+        }
+    }
+
+    /// # Get Object (Mutable, Static)
+    /// 
+    /// Get an object within the keys
+    /// 
+    /// Will return None if used on non-objects
+    fn get_obj_mut_st(&mut self, key: &str) -> Option<&mut Value> {
+        self.get_obj_mut(key.to_owned())
+    }
+
     /// # Get Object
     /// 
     /// Get an object within the keys
     /// 
     /// Will return None if used on non-objects
-    fn get_obj(&mut self, key: String) -> Option<&mut Value> {
+    fn get_obj(&self, key: String) -> Option<&Value> {
         if !self.is_object() { return None; }
         match self.get_key(key) {
             Some(value) => {
@@ -266,7 +323,7 @@ impl ValueExtensions for Value {
     /// Get an object within the keys
     /// 
     /// Will return None if used on non-objects
-    fn get_obj_st(&mut self, key: &str) -> Option<&mut Value> {
+    fn get_obj_st(&self, key: &str) -> Option<&Value> {
         self.get_obj(key.to_owned())
     }
 
@@ -278,7 +335,7 @@ impl ValueExtensions for Value {
     fn new_obj(&mut self, key: String) -> Option<&mut Value> {
         if !self.is_object() { return None; }
         self.set_key(key.clone(), json!({}));
-        Some(self.get_key(key).unwrap())
+        Some(self.get_key_mut(key).unwrap())
     }
 
     /// # New Object (Static)
@@ -391,12 +448,30 @@ impl FigCon {
         self.live_config.iter_values()
     }
 
+    /// # Get Key (Mutable)
+    /// 
+    /// Acquire a key's value within an object within a value
+    /// 
+    /// Will return None if used on non-objects
+    pub fn get_key_mut(&mut self, key: String) -> Option<&mut Value> {
+        self.live_config.get_key_mut(key)
+    }
+
+    /// # Get Key (Mutable, Static)
+    /// 
+    /// Acquire a key's value within an object within a value
+    /// 
+    /// Will return None if used on non-objects
+    pub fn get_key_mut_st(&mut self, key: &str) -> Option<&mut Value> {
+        self.get_key_mut(key.to_owned())
+    }
+
     /// # Get Key
     /// 
     /// Acquire a key's value within an object within a value
     /// 
     /// Will return None if used on non-objects
-    pub fn get_key(&mut self, key: String) -> Option<&mut Value> {
+    pub fn get_key(&self, key: String) -> Option<&Value> {
         self.live_config.get_key(key)
     }
 
@@ -405,7 +480,7 @@ impl FigCon {
     /// Acquire a key's value within an object within a value
     /// 
     /// Will return None if used on non-objects
-    pub fn get_key_st(&mut self, key: &str) -> Option<&mut Value> {
+    pub fn get_key_st(&self, key: &str) -> Option<&Value> {
         self.get_key(key.to_owned())
     }
 
@@ -499,12 +574,30 @@ impl FigCon {
         self.set_obj(key.to_owned(), object);
     }
 
+    /// # Get Object (Mutable)
+    /// 
+    /// Get an object within the keys
+    /// 
+    /// Will return None if used on non-objects
+    pub fn get_obj_mut(&mut self, key: String) -> Option<&mut Value> {
+        self.live_config.get_obj_mut(key)
+    }
+
+    /// # Get Object (Mutable, Static)
+    /// 
+    /// Get an object within the keys
+    /// 
+    /// Will return None if used on non-objects
+    pub fn get_obj_mut_st(&mut self, key: &str) -> Option<&mut Value> {
+        self.get_obj_mut(key.to_owned())
+    }
+
     /// # Get Object
     /// 
     /// Get an object within the keys
     /// 
     /// Will return None if used on non-objects
-    pub fn get_obj(&mut self, key: String) -> Option<&mut Value> {
+    pub fn get_obj(&self, key: String) -> Option<&Value> {
         self.live_config.get_obj(key)
     }
 
@@ -513,7 +606,7 @@ impl FigCon {
     /// Get an object within the keys
     /// 
     /// Will return None if used on non-objects
-    pub fn get_obj_st(&mut self, key: &str) -> Option<&mut Value> {
+    pub fn get_obj_st(&self, key: &str) -> Option<&Value> {
         self.get_obj(key.to_owned())
     }
 

@@ -1,6 +1,6 @@
 [package]
 name = "figcon"
-version = "0.2.1"
+version = "0.2.2"
 description = "A small stupid-simple synchronous serde_json config manager"
 license-file = "LICENSE"
 repository = "https://github.com/MisterSirCode/figcon"
