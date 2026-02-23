@@ -108,15 +108,12 @@ impl ValueExtensions for Value {
     /// 
     /// Will do nothing if used on non-objects
     fn set_key(&mut self, key: String, value: Value) {
-        match self.obj_mut() {
-            Some(object) => {
-                if object.contains_key(&key) {
-                    object[&key] = value;
-                } else {
-                    object.insert(key.to_owned(), value);
-                }
-            },
-            None => {}
+        if let Some(object) = self.obj_mut() {
+            if object.contains_key(&key) {
+                object[&key] = value;
+            } else {
+                object.insert(key.to_owned(), value);
+            }
         }
     }
 
@@ -229,15 +226,12 @@ impl ValueExtensions for Value {
         if !object.is_object() { return; } // Dont waste time. No object? leave
         if !object.any_keys() { return; } // Dont waste time. No keys? leave
         let can_extend = self.has_key(key.clone()) && self.any_keys();
-        match self.obj_mut() {
-            Some(self_obj) => {
-                if can_extend {
-                    self_obj.extend(object.obj().unwrap().clone());
-                } else {
-                    self.set_key(key, object);
-                }
-            },
-            None => {}
+        if let Some(self_obj) = self.obj_mut() {
+            if can_extend {
+                self_obj.extend(object.obj().unwrap().clone());
+            } else {
+                self.set_key(key, object);
+            }
         }
     }
 
